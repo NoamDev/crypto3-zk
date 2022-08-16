@@ -47,6 +47,7 @@ namespace nil {
                     typedef r1cs_gg_ppzksnark_mpc_generator_private_key<curve_type> private_key_type;
                     typedef r1cs_gg_ppzksnark_mpc_generator_public_key<curve_type> public_key_type;
                     typedef r1cs_gg_ppzksnark_mpc_params<curve_type> mpc_params_type;
+                    typedef r1cs_gg_ppzksnark_mpc_generator_helpers<curve_type> helpers_type;
                     using g1_type = typename CurveType::template g1_type<>;
                     using g2_type = typename CurveType::template g2_type<>;
                     using kc_type = commitments::knowledge_commitment<g2_type, g1_type>;
@@ -130,6 +131,11 @@ namespace nil {
                         return mpc_params_type {
                             keypair
                         };
+                    }
+
+                    void contribute_randomness(const mpc_params_type &mpc_params, const public_key_type &previous_pubkey) {
+                        auto transcript = helpers_type::compute_transcript(mpc_params);
+                        auto [pk, sk] = helpers_type::generate_keypair(previous_pubkey, mpc_params);
                     }
 
                private:

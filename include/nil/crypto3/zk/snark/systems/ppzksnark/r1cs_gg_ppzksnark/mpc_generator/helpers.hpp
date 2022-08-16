@@ -58,16 +58,17 @@ namespace nil {
                     using scalar_field_value_type = typename scalar_field_type::value_type; 
 
                 public:
-                    std::pair<public_key_type, private_key_type> generate_keypair(const public_key_type & previous_pubkey, const std::array<std::uint8_t, 64> &transcript) {
+                    std::pair<public_key_type, private_key_type> generate_keypair(const public_key_type & previous_pubkey,
+                                                                                  const std::array<std::uint8_t, 64> &transcript) {
                         private_key_type sk {
-                            algebra::random_element<scalar_field_type>();
+                            algebra::random_element<scalar_field_type>()
                         };
                         
                         auto delta_pok = construct_pok(sk.delta, transcript);
                         public_key_type pk {
                             sk.delta * previous_pubkey.delta_after,
                             delta_pok
-                        }
+                        };
 
                         return {pk, sk};
                     }
@@ -75,16 +76,15 @@ namespace nil {
                     static proof_of_knowledge<CurveType>
                         construct_pok(scalar_field_value_type x,
                            const std::vector<std::uint8_t> &transcript,
-                           std::uint8_t personalization,
-                           RNG&& rng = boost::random_device()) {
-                            const g1_value_type g1_s = algebra::random_element<g1_type>(rng);
+                           std::uint8_t personalization) {
+                            const g1_value_type g1_s = algebra::random_element<g1_type>(boost::random_device());
                             const g1_value_type g1_s_x = x * g1_s;
                             auto g2_s = compute_g2_s(g1_s, g1_s_x, transcript, personalization);
                             auto g2_s_x = x * g2_s;
                             return proof_of_knowledge<CurveType> { g1_s, g1_s_x, g2_s_x };
                     }
 
-                    static std::vector<std::uint8_t> serialize_mpc_params(const mpc_params &params) {
+                    static std::vector<std::uint8_t> serialize_mpc_params(const mpc_params_type &params) {
                         using endianness = nil::marshalling::option::little_endian;
                         auto filled_val = nil::crypto3::marshalling::types::fill_r1cs_gg_ppzksnark_mpc_params<mpc_params_type, endianness>(params);
                         std::vector<std::uint8_t> blob(filled_val.length());
@@ -94,7 +94,7 @@ namespace nil {
                         return blob;
                     }
 
-                    static std::vector<std::uint8_t> compute_transcript(const mpc_params &params) {
+                    static std::vector<std::uint8_t> compute_transcript(const mpc_params_type &params) {
                         auto params_blob = serialize_mpc_params(params);
                         return nil::crypto3::hash<hashes::blake2b<512>>(params_blob);
                     }
