@@ -133,4 +133,36 @@ BOOST_AUTO_TEST_CASE(phase2_proof_verification_without_delta_contribution_test) 
     BOOST_CHECK(verification_result);
 }
 
+BOOST_AUTO_TEST_CASE(phase2_proof_verification_with_delta_contribution_test) {
+    
+    using curve_type = curves::bls12<381>;
+    using scalar_field_type = curve_type::scalar_field_type;
+    using powers_of_tau_scheme_type = powers_of_tau<curve_type, 32>;
+    using proving_scheme_type = r1cs_gg_ppzksnark<curve_type>;
+    using proving_scheme_prover_type = r1cs_gg_ppzksnark_prover<curve_type, proving_mode::basic, reductions::domain_mode::basic_only>;
+    using mpc_generator_type = r1cs_gg_ppzksnark_mpc_generator<curve_type>;
+    using public_key_type = r1cs_gg_ppzksnark_mpc_generator_public_key<curve_type>;
+
+    auto acc = powers_of_tau_scheme_type::initial_accumulator();
+    powers_of_tau_scheme_type::contribute_randomness(acc);
+    auto result = powers_of_tau_scheme_type::finalize(acc);
+
+    auto r1cs_example = generate_r1cs_example_with_field_input<curve_type::scalar_field_type>(20,5);
+    
+    auto r1cs_copy = r1cs_example.constraint_system;
+    r1cs_copy.swap_AB_if_beneficial();
+
+    auto mpc_params = mpc_generator_type::init_mpc_keypair(r1cs_example.constraint_system, result);
+    std::vector<public_key_type> pks;
+    pks.emplace_back(mpc_generator_type::contribute_first_randomness(mpc_params));
+    BOOST_CHECK(mpc_generator_type::verify(mpc_params, pks, r1cs_example.constraint_system, result));
+    pks.emplace_back(mpc_generator_type::contribute_randomness(mpc_params, pks[0]));
+    BOOST_CHECK(mpc_generator_type::verify(mpc_params, pks, r1cs_example.constraint_system, result));
+    auto mpc_kp = mpc_params.keypair;
+
+    auto proof = proving_scheme_prover_type::process(mpc_kp.first, r1cs_example.primary_input, r1cs_example.auxiliary_input);
+    auto verification_result = proving_scheme_type::verify(mpc_kp.second, r1cs_example.primary_input, proof);
+    BOOST_CHECK(verification_result);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

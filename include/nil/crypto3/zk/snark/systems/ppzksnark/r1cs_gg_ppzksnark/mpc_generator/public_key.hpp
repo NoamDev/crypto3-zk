@@ -38,7 +38,6 @@ namespace nil {
 
                     typename curve_type::g1_type<>::value_type delta_after;
                     pok_type delta_pok;
-                    std::array<std::uint8_t, 64> transcript;
                 };
             }   // snarks
         }   // zk
